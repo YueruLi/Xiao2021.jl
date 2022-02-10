@@ -5,9 +5,13 @@ import Base.NamedTuple
 function NamedTuple(d::Dict{String, T} where T)
     NamedTuple(Symbol(k) => v for (k,v) in d)
 end
-init0 = matread("init0.mat")["init"];
-init = NamedTuple(init0);
 
+#init
+function getInit()
+    init0 = matread("init0.mat")["init"];
+    init = NamedTuple(init0);
+    return init
+end
 #Settings 
 function getSettings()
     set = (seed = 29111998, T = 12*35, N = 10000, Nx =7, Ne =3, Ny = 7, Na = 3);
