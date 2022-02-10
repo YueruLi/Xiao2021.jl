@@ -1,6 +1,6 @@
 using Xiao2021
 using Test
 
-@testset "Xiao2021.jl" begin
-    # Write your tests here.
+@testset "foo check" begin
+   @test foo(0) < 1E-16
 end
