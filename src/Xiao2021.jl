@@ -91,5 +91,5 @@ function getParams()
     par = NamedTuple(parameters)
     return par
 end
-export getSettings, getFixParameters,getParams
+export getSettings, getFixParameters,getParams, getInit, hcEvolution
 end
