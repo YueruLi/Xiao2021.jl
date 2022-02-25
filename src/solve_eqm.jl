@@ -229,8 +229,8 @@ end
 
 #Solve for equilibrium
 function solve(par, set, fxp, init)
-    kk = set.Ny * set.Na
-    ii = set.Nx * set.Ne
+    kk = set.Ny * set.Na;
+    ii = set.Nx * set.Ne;
 
     epsf = repeat([-2, 0, 2] .* fxp.sdf .+ par.muf * fxp.mum, inner = 7)
     epsm = repeat([-2, 0, 2] .* fxp.sdm .+ fxp.mum, inner = 7)
