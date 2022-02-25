@@ -5,7 +5,8 @@ import Base.NamedTuple
 function NamedTuple(d::Dict{String, T} where T)
     NamedTuple(Symbol(k) => v for (k,v) in d)
 end
-
+include("solve_eqm.jl")
+include("stages_PL.jl")
 #init
 function getInit()
     init0 = matread("init0.mat")["init"];
@@ -69,7 +70,7 @@ function getFixParameters()
                 "deltaf_NC"=> 0.012,
                 "deltam_NC" => 0.0075,
                 "deltaf_YC" => 0.016,
-                "detlam_YC" => 0.0075,
+                "deltam_YC" => 0.0075,
                 "delta" => 0.0075,
                 "rho" =>-14.6947062177210,
                 "mum" =>0.757706936476000,
@@ -91,5 +92,6 @@ function getParams()
     par = NamedTuple(parameters)
     return par
 end
-export getSettings, getFixParameters,getParams, getInit, hcEvolution
+
+export getSettings, getFixParameters,getParams, getInit, solve_eqm
 end
