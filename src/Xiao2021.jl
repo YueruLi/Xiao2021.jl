@@ -6,7 +6,6 @@ function NamedTuple(d::Dict{String, T} where T)
     NamedTuple(Symbol(k) => v for (k,v) in d)
 end
 include("solve_eqm.jl")
-include("stages_PL.jl")
 #init
 function getInit()
     init0 = matread("init0.mat")["init"];
