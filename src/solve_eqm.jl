@@ -491,13 +491,36 @@ function solve(par, set, fxp, init)
         PfD_0 = PfD
 
         SmNC = SmNC_0
+        SmNCPos = copy(SmNC_0)
+        SmNCPos[SmNCPos.<0] .= 0
+
         SmYC = SmYC_0
+        SmYCPos = copy(SmYC)
+        SmYCPos[SmYCPos.<0] .= 0
+
         SmPL = SmPL_0
+        SmPLPos = copy(SmPL)
+        SmPLPos[SmPLPos.<0] .= 0
+
         SmD = SmD_0
+        SmDPos = copy(SmD)
+        SmDPos[SmDPos.<0] .= 0
+
         SfNC = SfNC_0
+        SfNCPos = copy(SfNC)
+        SfNCPos[SfNCPos.<0] .= 0
+
         SfYC = SfYC_0
+        SfYCPos = copy(SfYC)
+        SfYCPos[SfYCPos.<0] .= 0
+
         SfPL = SfPL_0
+        SmPLPos = copy(SmPL)
+        SmPLPos[SmPLPos.<0] .= 0
+
         SfD = SfD_0
+        SfDPos = copy(SfD)
+        SfDPos[SfDPos.<0] .= 0
     end
     return PmNC
 end
