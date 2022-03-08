@@ -8,8 +8,7 @@ end
 include("solve_eqm.jl")
 #init
 function getInit()
-    init0 = matread("init0.mat")["init"];
-    init = NamedTuple(init0);
+    init = NamedTuple(matread("init0.mat")["init"]);
     return init
 end
 #Settings 
@@ -75,8 +74,8 @@ function getFixParameters()
                 "mum" =>0.757706936476000,
                 "d3" => 0)
 
-    fxp = merge(fxp,NamedTuple(tempFxp))
-    return fxp
+    fxp = merge(fxp,NamedTuple(tempFxp));
+    return fxp;
 end;
 function getParams()
     parameters = Dict("a"=>0.956548300980000,"K"=>22.2322078018640,
@@ -88,9 +87,9 @@ function getParams()
                 "d1f" => 0.00107456051900000,
                 "d2f" => 0.0116103577370000,
                 "b" => 7.79173908202000);
-    par = NamedTuple(parameters)
-    return par
+    par = NamedTuple(parameters);
+    return par;
 end
-
+#export functions 
 export getSettings, getFixParameters,getParams, getInit, solve_eqm
 end
