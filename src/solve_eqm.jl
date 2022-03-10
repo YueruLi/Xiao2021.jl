@@ -1,40 +1,8 @@
 module solve_eqm
 # Write your package code here.
 using NLsolve
-
-#Calculates the Sigmoid 
-function logit(x, fixedParam)
-    return 1 ./ (1.0 .+ exp.(-fixedParam.lambda .* x))
-end
-
-#Solves for steady state distribution of workforce across age stages
-function solveStages(var, fixedParam)
-    NC_f    = var[1];
-    YC_f    = var[2];
-    PL_f    = var[3];
-    D_f     = var[4];
-
-    NC_m    = var[5];
-    YC_m    = var[6];
-    PL_m    = var[7];
-    D_m     = var[8];
-
-
-    # 4 equations for women
-    eq1f = NC_f + YC_f + PL_f + D_f - 0.5;
-    eq2f = fixedParam.chi*(NC_f+YC_f) - (fixedParam.etaf+fixedParam.gamma)*PL_f; # flows into and out of PL
-    eq3f = fixedParam.etaf*PL_f - (fixedParam.chi+fixedParam.gamma)*YC_f; # flows into and out of YC
-    eq4f = fixedParam.gamma*(NC_f+YC_f+PL_f) - fixedParam.phi*D_f;
-
-    # 4 equations for men
-    eq1m = NC_m + YC_m + PL_m + D_m - 0.5;
-    eq2m = fixedParam.chi*(NC_m+YC_m) - (fixedParam.etam+fixedParam.gamma)*PL_m; # flows into and out of PL
-    eq3m = fixedParam.etam*PL_m - (fixedParam.chi+fixedParam.gamma)*YC_m; # flows into and out of YC
-    eq4m = fixedParam.gamma*(NC_m+YC_m+PL_m) - fixedParam.phi*D_m;
-
-    return [eq1f, eq2f, eq3f, eq4f, eq1m, eq2m, eq3m, eq4m];
-end
-
+include("solve_dist.jl")
+include("helper.jl")
 #Functions for updating male value functions
 #Male No Child
 function getPmNC(x, y,v0,fxp,par,Pi,gem,SmNC,UmNC,PmD_hat,PmPL_hat,PmNC_hat,epsm,alpha,output,tau)
@@ -42,7 +10,7 @@ function getPmNC(x, y,v0,fxp,par,Pi,gem,SmNC,UmNC,PmD_hat,PmPL_hat,PmNC_hat,epsm
     dmNC1 = SmNC[x, :] .- SmNC[x, y]
     #Calculate the value function if no hc increment in the next round
     val1 = fxp.deltam_NC * (Pi[y] + UmNC[x]) +
-           fxp.lambdae * par.sigma * sum(v0 .* dmNC1 .* logit(dmNC1, fxp)) * (SmNC[x, y] > 0) +
+           fxp.lambdae * par.sigma * sum(v0 .* dmNC1 .* helper.logit(dmNC1, fxp)) * (SmNC[x, y] > 0) +
            fxp.gamma * PmD_hat[x, y] + fxp.chi * PmPL_hat[x, y] +
            (1 - fxp.deltam_NC - fxp.gamma - fxp.chi) * PmNC_hat[x, y]
     #Check if it is possible for HC to grow
@@ -52,7 +20,7 @@ function getPmNC(x, y,v0,fxp,par,Pi,gem,SmNC,UmNC,PmD_hat,PmPL_hat,PmNC_hat,epsm
         dmNC2 = SmNC[x+1, :] .- SmNC[x+1, y]
         #Calculate the value function if hc increments in the next round
         val2 = fxp.deltam_NC * (Pi[y] + UmNC[x+1]) +
-               fxp.lambdae * par.sigma * sum(v0 .* dmNC2 .* logit(dmNC2, fxp)) * (SmNC[x+1, y] > 0) +
+               fxp.lambdae * par.sigma * sum(v0 .* dmNC2 .* helper.logit(dmNC2, fxp)) * (SmNC[x+1, y] > 0) +
                fxp.gamma * PmD_hat[x+1, y] + fxp.chi * PmPL_hat[x+1, y] +
                (1 - fxp.deltam_NC - fxp.gamma - fxp.chi) * PmNC_hat[x+1, y]
         #weight the expected value by probability of HC growth
@@ -82,7 +50,7 @@ function getPmYC(x, y,v0,Pi,fxp,par,epsm,gem,tau,output,alpha,UmYC,SmYC,PmD_hat,
     dmYC1 = SmYC[x, :] .- SmYC[x, y]
     #Calculate the value function if no hc increment in the next round
     val1 = fxp.deltam_YC * (Pi[y] + UmYC[x]) +
-           fxp.lambdae * par.sigma * sum(v0 .* dmYC1 .* logit(dmYC1, fxp)) * (SmYC[x, y] > 0) +
+           fxp.lambdae * par.sigma * sum(v0 .* dmYC1 .* helper.logit(dmYC1, fxp)) * (SmYC[x, y] > 0) +
            fxp.gamma * PmD_hat[x, y] + fxp.chi * PmPL_hat[x, y] +
            (1 - fxp.deltam_YC - fxp.gamma - fxp.chi) * PmYC_hat[x, y]
     #Check if it is possible for HC to grow
@@ -92,7 +60,7 @@ function getPmYC(x, y,v0,Pi,fxp,par,epsm,gem,tau,output,alpha,UmYC,SmYC,PmD_hat,
         dmYC2 = SmYC[x+1, :] .- SmYC[x+1, y]
         #Calculate the value function if hc increments in the next round
         val2 = fxp.deltam_YC * (Pi[y] + UmYC[x+1]) +
-               fxp.lambdae * par.sigma * sum(v0 .* dmYC2 .* logit(dmYC2, fxp)) * (SmYC[x+1, y] > 0) +
+               fxp.lambdae * par.sigma * sum(v0 .* dmYC2 .* helper.logit(dmYC2, fxp)) * (SmYC[x+1, y] > 0) +
                fxp.gamma * PmD_hat[x+1, y] + fxp.chi * PmPL_hat[x+1, y] +
                (1 - fxp.deltam_YC - fxp.gamma - fxp.chi) * PmYC_hat[x+1, y]
         if (y % 7 == 0)
@@ -111,7 +79,7 @@ function getPmD(x,y,v0,Pi,fxp,par,output,gem,tau,epsm,alpha,SmD,PmD_hat,UmD)
     #Calculate the value function if no hc increment in the next round
     val1 = fxp.phi * Pi[y] + fxp.delta * (Pi[y] + UmD[x]) +
            (1 - fxp.phi - fxp.delta) * PmD_hat[x, y] +
-           fxp.lambdae * par.sigma * sum(v0 .* dmD1 .* logit(dmD1, fxp)) * (SmD[x, y] > 0)
+           fxp.lambdae * par.sigma * sum(v0 .* dmD1 .* helper.logit(dmD1, fxp)) * (SmD[x, y] > 0)
     #Check if it is possible for HC to grow
     if (x % 7 == 0)
         expectedPmD = val1
@@ -120,7 +88,7 @@ function getPmD(x,y,v0,Pi,fxp,par,output,gem,tau,epsm,alpha,SmD,PmD_hat,UmD)
         #Calculate the value function if hc increments in the next round
         val2 = fxp.phi * Pi[y] + fxp.delta * (Pi[y] + UmD[x+1]) +
                (1 - fxp.phi - fxp.delta) * PmD_hat[x+1, y] +
-               fxp.lambdae * par.sigma * sum(v0 .* dmD2 .* logit(dmD2, fxp)) * (SmD[x+1, y] > 0)
+               fxp.lambdae * par.sigma * sum(v0 .* dmD2 .* helper.logit(dmD2, fxp)) * (SmD[x+1, y] > 0)
         if (y % 7 == 0)
             expectedPmD = gem[7] * val2 + (1 - gem[7]) * val1
         else
@@ -137,7 +105,7 @@ function getPfNC(x, y,v0,fxp,par,Pi,gef,SfNC,UfNC,PfD_hat,PfPL_hat,PfNC_hat,epsf
     dfNC1 = SfNC[x, :] .- SfNC[x, y]
     #Calculate the value function if no hc increment in the next round
     val1 = fxp.deltaf_NC * (Pi[y] + UfNC[x]) +
-           fxp.lambdae * par.sigma * sum(v0 .* dfNC1 .* logit(dfNC1, fxp)) * (SfNC[x, y] > 0) +
+           fxp.lambdae * par.sigma * sum(v0 .* dfNC1 .* helper.logit(dfNC1, fxp)) * (SfNC[x, y] > 0) +
            fxp.gamma * PfD_hat[x, y] + fxp.chi * PfPL_hat[x, y] +
            (1 - fxp.deltaf_NC - fxp.gamma - fxp.chi) * PfNC_hat[x, y]
     #Check if it is possible for HC to grow
@@ -147,7 +115,7 @@ function getPfNC(x, y,v0,fxp,par,Pi,gef,SfNC,UfNC,PfD_hat,PfPL_hat,PfNC_hat,epsf
         dfNC2 = SfNC[x+1, :] .- SfNC[x+1, y]
         #Calculate the value function if hc increments in the next round
         val2 = fxp.deltaf_NC * (Pi[y] + UfNC[x+1]) +
-               fxp.lambdae * par.sigma * sum(v0 .* dfNC2 .* logit(dfNC2, fxp)) * (SfNC[x+1, y] > 0) +
+               fxp.lambdae * par.sigma * sum(v0 .* dfNC2 .* helper.logit(dfNC2, fxp)) * (SfNC[x+1, y] > 0) +
                fxp.gamma * PfD_hat[x+1, y] + fxp.chi * PfPL_hat[x+1, y] +
                (1 - fxp.deltaf_NC - fxp.gamma - fxp.chi) * PfNC_hat[x+1, y]
         if (y % 7 == 0)
@@ -176,7 +144,7 @@ function getPfYC(x, y,v0,Pi,fxp,par,epsf,gef,tau,output,alpha,UfYC,SfYC,PfD_hat,
     dfYC1 = SfYC[x, :] .- SfYC[x, y]
     #Calculate the value function if no hc increment in the next round
     val1 = fxp.deltaf_YC * (Pi[y] + UfYC[x]) +
-           fxp.lambdae * par.sigma * sum(v0 .* dfYC1 .* logit(dfYC1, fxp)) * (SfYC[x, y] > 0) +
+           fxp.lambdae * par.sigma * sum(v0 .* dfYC1 .* helper.logit(dfYC1, fxp)) * (SfYC[x, y] > 0) +
            fxp.gamma2 * PfD_hat[x, y] + fxp.chi * PfPL_hat[x, y] +
            (1 - fxp.deltaf_YC - fxp.gamma - fxp.chi) * PfYC_hat[x, y]
     #Check if it is possible for HC to grow
@@ -186,7 +154,7 @@ function getPfYC(x, y,v0,Pi,fxp,par,epsf,gef,tau,output,alpha,UfYC,SfYC,PfD_hat,
         dfYC2 = SfYC[x+1, :] .- SfYC[x+1, y]
         #Calculate the value function if hc increments in the next round
         val2 = fxp.deltaf_YC * (Pi[y] + UfYC[x+1]) +
-               fxp.lambdae * par.sigma * sum(v0 .* dfYC2 .* logit(dfYC2, fxp)) * (SfYC[x+1, y] > 0) +
+               fxp.lambdae * par.sigma * sum(v0 .* dfYC2 .* helper.logit(dfYC2, fxp)) * (SfYC[x+1, y] > 0) +
                fxp.gamma2 * PfD_hat[x+1, y] + fxp.chi * PfPL_hat[x+1, y] +
                (1 - fxp.deltaf_YC - fxp.gamma - fxp.chi) * PfYC_hat[x+1, y]
         if (y % 7 == 0)
@@ -207,7 +175,7 @@ function getPfD(x,y,v0,Pi,fxp,par,output,gef,tau,epsf,alpha,SfD,PfD_hat,UfD)
     #Calculate the value function if no hc increment in the next round
     val1 = fxp.phi * Pi[y] + fxp.delta * (Pi[y] + UfD[x]) +
            (1 - fxp.phi - fxp.delta) * PfD_hat[x, y] +
-           fxp.lambdae * par.sigma * sum(v0 .* dfD1 .* logit(dfD1, fxp)) * (SfD[x, y] > 0)
+           fxp.lambdae * par.sigma * sum(v0 .* dfD1 .* helper.logit(dfD1, fxp)) * (SfD[x, y] > 0)
     #Check if it is possible for HC to grow
     if (x % 7 == 0)
         expectedPfD = val1
@@ -216,7 +184,7 @@ function getPfD(x,y,v0,Pi,fxp,par,output,gef,tau,epsf,alpha,SfD,PfD_hat,UfD)
         #Calculate the value function if hc increments in the next round
         val2 = fxp.phi * Pi[y] + fxp.delta * (Pi[y] + UfD[x+1]) +
                (1 - fxp.phi - fxp.delta) * PfD_hat[x+1, y] +
-               fxp.lambdae * par.sigma * sum(v0 .* dfD2 .* logit(dfD2, fxp)) * (SfD[x+1, y] > 0)
+               fxp.lambdae * par.sigma * sum(v0 .* dfD2 .* helper.logit(dfD2, fxp)) * (SfD[x+1, y] > 0)
         if (y % 7 == 0)
             expectedPfD = gef[7] * val2 + (1 - gef[7]) * val1
         else
@@ -240,7 +208,8 @@ function solve(par, set, fxp, init)
     #jobAmenityType = repeat(fxp.alpha,inner=7);
     output = par.K .* [(par.a * hc^fxp.rho + (1 - par.a) * p^fxp.rho)^(1 / fxp.rho) for hc in repeat(fxp.hc, outer = 3), p in repeat(fxp.p, outer = 3)]
     outputb = repeat([par.b * hc for hc in fxp.hc], outer = 3)
-    e = Dict("stages" => nlsolve(x -> solveStages(x, fxp), 12.50 .* ones(typeof(12.50), 8)).zero, "converge" => 1, "Pineg" => 0)
+    #This stages solution from nlsolve is slightly different from that from matlab's fsolve. The difference is on the order of 1e-6
+    e = Dict("stages" => nlsolve(x -> helper.solveStages(x, fxp), 12.50 .* ones(typeof(12.50), 8)).zero, "converge" => 1, "Pineg" => 0)
     NC_f = e["stages"][1]
     YC_f = e["stages"][2]
     PL_f = e["stages"][3]
@@ -419,12 +388,12 @@ function solve(par, set, fxp, init)
                 fxp.lambdau_NC * (1 - par.sigma) * sum(ufNC_0 .* SfNCPos[:, j]) +
                 fxp.lambdau_YC * (1 - par.sigma) * (sum(ufYC_0 .* SfYCPos[:, j]) + sum(ufD_0 .* SfDPos[:, j])) +
                 fxp.lambdae * (1 - par.sigma) * (
-                    sum(hmNC_0 .* dmNC .* logit(dmNC, fxp)) +
-                    sum(hmYC_0 .* dmYC .* logit(dmYC, fxp)) +
-                    sum(hmD_0 .* dmD .* logit(dmD, fxp)) +
-                    sum(hfNC_0 .* dfNC .* logit(dfNC, fxp)) +
-                    sum(hfYC_0 .* dfYC .* logit(dfYC, fxp)) +
-                    sum(hfD_0 .* dfD .* logit(dfD, fxp))
+                    sum(hmNC_0 .* dmNC .* helper.logit(dmNC, fxp)) +
+                    sum(hmYC_0 .* dmYC .* helper.logit(dmYC, fxp)) +
+                    sum(hmD_0 .* dmD .* helper.logit(dmD, fxp)) +
+                    sum(hfNC_0 .* dfNC .* helper.logit(dfNC, fxp)) +
+                    sum(hfYC_0 .* dfYC .* helper.logit(dfYC, fxp)) +
+                    sum(hfD_0 .* dfD .* helper.logit(dfD, fxp))
                 )
                 + Pi0[j]
             )
@@ -522,7 +491,13 @@ function solve(par, set, fxp, init)
         SfDPos = copy(SfD)
         SfDPos[SfDPos.<0] .= 0
     end
-    return PmNC
+    return fxp,SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, SfD,e["stages"],vcat(umNC_0, umPL_0, umYC_0, umD_0, ufNC_0, ufPL_0, ufYC_0, ufD_0, vec(hmNC_0), vec(hmYC_0), vec(hmPL_0), vec(hmD_0),vec(hfNC_0), vec(hfYC_0), vec(hfPL_0), vec(hfD_0),vec(v0));
+    #x0 = zeros(Float64,length(vcat(umNC_0, umPL_0, umYC_0, umD_0, ufNC_0, ufPL_0, ufYC_0, ufD_0, vec(hmNC_0), vec(hmYC_0), vec(hmPL_0), vec(hmD_0),vec(hfNC_0), vec(hfYC_0), vec(hfPL_0), vec(hfD_0),vec(v0))));
+    #for it2 = 1:maxit
+    #    x = solve_dist.solve(x0, set, fxp, par, SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, SfD, stages);
+    #    x[abs(x) .< 1e-30] = 0;
+    #    dev                 = (x-x0)./x0;
+    #end
 end
 
 export solve

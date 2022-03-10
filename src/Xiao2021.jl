@@ -6,6 +6,8 @@ function NamedTuple(d::Dict{String, T} where T)
     NamedTuple(Symbol(k) => v for (k,v) in d)
 end
 include("solve_eqm.jl")
+include("solve_dist.jl")
+include("helper.jl")
 #init
 function getInit()
     init = NamedTuple(matread("init0.mat")["init"]);
@@ -90,6 +92,5 @@ function getParams()
     par = NamedTuple(parameters);
     return par;
 end
-#export functions 
 export getSettings, getFixParameters,getParams, getInit, solve_eqm
 end
