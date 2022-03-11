@@ -1,7 +1,4 @@
 module helper
-function logit(x, fixedParam)
-    return 1 ./ (1.0 .+ exp.(-fixedParam.lambda .* x))
-end
 #Solves for steady state distribution of workforce across age stages
 function solveStages(var, fixedParam)
     NC_f    = var[1];
@@ -29,5 +26,5 @@ function solveStages(var, fixedParam)
 
     return [eq1f, eq2f, eq3f, eq4f, eq1m, eq2m, eq3m, eq4m];
 end
-export logit, solveStages
+export solveStages
 end
