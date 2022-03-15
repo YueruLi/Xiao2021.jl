@@ -86,7 +86,7 @@ function solveDist(x0, set, fxp, par, SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, S
 
     hfD_II = [get_hgD_II_ij(i,j,SfD,ufD_I,hfNC_I,hfYC_I,hfPL_I,hfD_I,fxp,v) for i in 1:21, j in 1:21];
 
-    # Endogenous Quites
+    # Stage (III) Endogenous Quits
     # after endogenous quits, all measures must equal measures at the beginning
     umNCIII  = vec(umNC_II + sum(hmNC_II.*(SmNC .<=0), dims=2));
     umPLIII  = vec(umPL_II + sum(hmPL_II.*(SmPL .<=0),dims= 2));

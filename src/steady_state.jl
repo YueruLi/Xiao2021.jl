@@ -2,19 +2,20 @@ module steady_state
 function logit(x, fixedParam)
     return 1 ./ (1.0 .+ exp.(-fixedParam.lambda .* x))
 end
+#HC evolution function, g for gender, a for age 
 function geth_I(x,y,geg,hga)
     #gea is the probability of hc growth for gender g
     #hga is the human capital distribution of gender g in stage a
     #get the job productivity level from y, an integer from 1 to 7
     jobLevel = y%7 == 0 ? 7 : y%7
     
-
     hga_I_xy = hga[x,y]*(1-geg[jobLevel])
+    #check human capital level, if 1, human capital measure decreases
     if(x%7==1)
         return hga_I_xy
-    elseif(x%7==0)
+    elseif(x%7==0)#check human capital level, if 0, human capital measure increases
         hga_I_xy = hga[x,y] + hga[x-1,y]*geg[jobLevel]
-    else
+    else #check human capital level, there's flowin and flow out
         hga_I_xy = hga_I_xy + hga[x-1,y]*geg[jobLevel]
     end
     return hga_I_xy

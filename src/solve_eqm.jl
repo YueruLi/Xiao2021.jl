@@ -9,7 +9,7 @@ function logit(x, fixedParam)
     return 1 ./ (1.0 .+ exp.(-fixedParam.lambda .* x))
 end
 #Solve for equilibrium
-function solve(par, set, fxp, init)
+function solve(par, set, fxp, init;purpose="solve")
     kk = set.Ny * set.Na;
     ii = set.Nx * set.Ne;
 
@@ -309,8 +309,11 @@ function solve(par, set, fxp, init)
             SfDPos = copy(SfD)
             SfDPos[SfDPos.<0] .= 0
         end
-        #return e;
+        
         x0 = vcat(umNC_0, umPL_0, umYC_0, umD_0, ufNC_0, ufPL_0, ufYC_0, ufD_0, vec(hmNC_0), vec(hmYC_0), vec(hmPL_0), vec(hmD_0),vec(hfNC_0), vec(hfYC_0), vec(hfPL_0), vec(hfD_0),vec(v0));
+        if(cmp(purpose,"solve_dist_dev")==0)
+            return fxp,SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, SfD,e["stages"],x0;
+        end
         x = zeros(Float64,length(x0));
         x_orig = x0;
         for it2 = 1:maxit
@@ -417,7 +420,7 @@ function solve(par, set, fxp, init)
         end
         #converged 
         if (change_dist[itout]<tol)
-            print("After Iterations "*string(itout)*" converge with change "*string(change_dist[itout]));
+            println("After Iterations "*string(itout)*" converge with change "*string(change_dist[itout]));
             findneg = (Pi .< 0);
             if (sum(findneg)>0)
                 get!(e, "Pineg", 1);
@@ -425,6 +428,7 @@ function solve(par, set, fxp, init)
             break;
         end
     end
+    return e;
 end
 export solve
 end
