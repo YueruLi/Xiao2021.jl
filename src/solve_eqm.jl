@@ -8,6 +8,8 @@ using .solve_dist, .valueFunctions, .helper
 function logit(x, fixedParam)
     return 1 ./ (1.0 .+ exp.(-fixedParam.lambda .* x))
 end
+
+
 #Solve for equilibrium
 function solve(par, set, fxp, init;purpose="solve")
     kk = set.Ny * set.Na;
@@ -22,9 +24,9 @@ function solve(par, set, fxp, init;purpose="solve")
     output = par.K .* [(par.a * hc^fxp.rho + (1 - par.a) * p^fxp.rho)^(1 / fxp.rho) for hc in repeat(fxp.hc, outer = 3), p in repeat(fxp.p, outer = 3)]
     outputb = repeat([par.b * hc for hc in fxp.hc], outer = 3)
     #This stages solution from nlsolve is slightly different from that from matlab's fsolve. The difference is on the order of 1e-6
-    e = Dict("stages" => nlsolve(x -> solveStages(x, fxp), 12.50 .* ones(typeof(12.50), 8)).zero, "converge" => 1, "Pineg" => 0)
-    #stages = [0.0714286494397354,0.117096067390252,0.0614754501329449,0.249999769056968,0.0714293405864623,0.175877941575804,0.00269313154484208,0.250000013739020];
-    #e = Dict("stages" => stages, "converge" => 1, "Pineg" => 0)
+    #e = Dict("stages" => nlsolve(x -> solveStages(x, fxp), 12.50 .* ones(typeof(12.50), 8)).zero, "converge" => 1, "Pineg" => 0)
+    stages = [0.0714286494397354,0.117096067390252,0.0614754501329449,0.249999769056968,0.0714293405864623,0.175877941575804,0.00269313154484208,0.250000013739020];
+    e = Dict("stages" => stages, "converge" => 1, "Pineg" => 0)
     NC_f = e["stages"][1]
     YC_f = e["stages"][2]
     PL_f = e["stages"][3]
@@ -42,6 +44,7 @@ function solve(par, set, fxp, init;purpose="solve")
     umPL_0 = vec(init.umYC / 2)
     umYC_0 = vec(init.umYC / 2)
     umD_0 = vec(init.umD)
+
     ufNC_0 = vec(init.ufNC)
     ufPL_0 = vec(init.ufYC / 2)
     ufYC_0 = vec(init.ufYC / 2)
@@ -105,7 +108,7 @@ function solve(par, set, fxp, init;purpose="solve")
     SfDPos = copy(SfD)
     SfDPos[SfDPos.<0] .= 0
 
-    #Probably don't need this 
+    #Joint values 
     PmNC_0 = SmNC + [x + y for x in UmNC_0, y in Pi0]
     PmPL_0 = SmPL + [x + y for x in UmPL_0, y in Pi0]
     PmYC_0 = SmYC + [x + y for x in UmYC_0, y in Pi0]
@@ -116,7 +119,10 @@ function solve(par, set, fxp, init;purpose="solve")
     PfYC_0 = SfYC + [x + y for x in UfYC_0, y in Pi0]
     PfD_0 = SfD + [x + y for x in UfD_0, y in Pi0]
 
+
+    #initial guess for tax rate
     tau = fxp.Transfer * sum(sum(hmPL_0 + hfPL_0, dims = 1) .* output, dims = 1) / (sum(sum(hmNC_0 + hfNC_0 + hmYC_0 + hfYC_0 + hmD_0 + hfD_0, dims = 1) .* output, dims = 1))
+    #prepare to update these values
     PmNC = zeros(Float64, 21, 21)
     PmPL = zeros(Float64, 21, 21)
     PmYC = zeros(Float64, 21, 21)
@@ -135,16 +141,63 @@ function solve(par, set, fxp, init;purpose="solve")
     UfPL = zeros(Float64, 21)
     UfYC = zeros(Float64, 21)
     UfD = zeros(Float64, 21)
-    
+    Pi = zeros(Float64, 21);
+
+
+    get!(e, "hmNC", hmNC_0);
+    get!(e, "hmPL", hmPL_0);
+    get!(e, "hmYC", hmYC_0);
+    get!(e, "hmD", hmD_0);
+    get!(e, "hfNC", hfNC_0);
+    get!(e, "hfPL", hfPL_0);
+    get!(e, "hfYC", hfYC_0);
+    get!(e, "hfD", hfD_0);
+
+    get!(e, "umNC", umNC_0);
+    get!(e, "umPL", umPL_0);
+    get!(e, "umYC", umYC_0);
+    get!(e, "umD", umD_0);
+    get!(e, "ufNC", ufNC_0);
+    get!(e, "ufPL", ufPL_0);
+    get!(e, "ufYC", ufYC_0);
+    get!(e, "ufD", ufD_0);
+
+    get!(e, "v", v0);
+
+    #output surpluses
+    get!(e, "SmNC", SmNC);
+    get!(e, "SmPL", SmPL);
+    get!(e, "SmYC", SmYC);
+    get!(e, "SmD", SmD);
+    get!(e, "SfNC", SfNC);
+    get!(e, "SfPL", SfPL);
+    get!(e, "SfYC", SfYC);
+    get!(e, "SfD", SfD);
+
+    get!(e, "UmNC", UmNC);
+    get!(e, "UmPL", UmPL);
+    get!(e, "UmYC", UmYC);
+    get!(e, "UmD", UmD);
+    get!(e, "UfNC", UfNC);
+    get!(e, "UfPL", UfPL);
+    get!(e, "UfYC", UfYC);
+    get!(e, "UfD", UfD);
+    get!(e, "tau", tau);
+    get!(e, "Pi", Pi);
+
+    #Value function iterations
     maxit = 10000
     change_dist = zeros(maxit, 1)
     tol = 1e-9
+    x0 = vcat(umNC_0, umPL_0, umYC_0, umD_0, ufNC_0, ufPL_0, ufYC_0, ufD_0, vec(hmNC_0), vec(hmYC_0), vec(hmPL_0), vec(hmD_0),vec(hfNC_0), vec(hfYC_0), vec(hfPL_0), vec(hfD_0),vec(v0));
+    x = zeros(Float64,length(x0));
+    #outer loop
     for itout = 1:maxit
+
         effU = sum(umNC_0 + ufNC_0 + fxp.s1 * (umYC_0 + umD_0 + ufYC_0 + ufD_0)) +
            fxp.s2 * sum(sum(hmNC_0 + hmYC_0 + hmD_0 + hfNC_0 + hfYC_0 + hfD_0, dims = 1));
         V = sum(v0)
         fxp = merge(fxp, (lambdau_NC = fxp.theta / (effU * V)^0.5, lambdau_YC = fxp.theta / (effU * V)^0.5 * fxp.s1, lambdae = fxp.theta / (effU * V)^0.5 * fxp.s2));
-        Pi = zeros(Float64, 21);
         for it1 = 1:maxit
             #Value of Unemployment
             #Male NC
@@ -309,17 +362,93 @@ function solve(par, set, fxp, init;purpose="solve")
             SfDPos = copy(SfD)
             SfDPos[SfDPos.<0] .= 0
         end
-        
+        #For development purposes, will be deleted in the future
+        if(cmp(purpose,"value_fn_dev")==0)
+            ValueDict = Dict("SmNC" => SmNC,"UfNC" => UfNC);
+            get!(ValueDict, "SmPL", SmPL);
+            get!(ValueDict, "SmYC", SmYC);
+            get!(ValueDict, "SmD", SmD);
+
+            get!(ValueDict, "SfNC", SfNC);
+            get!(ValueDict, "SfPL", SfPL);
+            get!(ValueDict, "SfYC", SfYC);
+            get!(ValueDict, "SfD", SfD);
+
+            get!(ValueDict, "UfPL", UfPL);
+            get!(ValueDict, "UfYC", UfYC);
+            get!(ValueDict, "UfD", UfD);
+
+            get!(ValueDict, "UmNC", UmNC);
+            get!(ValueDict, "UmPL", UmPL);
+            get!(ValueDict, "UmYC", UmYC);
+            get!(ValueDict, "UmD", UmD);
+
+            get!(ValueDict, "Pi", Pi);
+            return ValueDict;
+        end
+
+
         x0 = vcat(umNC_0, umPL_0, umYC_0, umD_0, ufNC_0, ufPL_0, ufYC_0, ufD_0, vec(hmNC_0), vec(hmYC_0), vec(hmPL_0), vec(hmD_0),vec(hfNC_0), vec(hfYC_0), vec(hfPL_0), vec(hfD_0),vec(v0));
+        x_orig = x0;
+        
+        #For development purposes, will be deleted in the future
         if(cmp(purpose,"solve_dist_dev")==0)
             return fxp,SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, SfD,e["stages"],x0;
         end
-        x = zeros(Float64,length(x0));
-        x_orig = x0;
+        #For development purposes, will be deleted in the future
+        if(cmp(purpose,"solve_dist_matrix")==0)
+            x = solveDist(x0, set, fxp, par, SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, SfD, e["stages"]);
+            x[x .< 1e-30] .= 0;
+            v0 = x[length(x)-set.Ny*set.Na+1:length(x)];
+            #delete v0 from x
+            x = deleteat!(x, length(x)-set.Ny*set.Na+1:length(x));
+            x = reshape(x,set.Nx*set.Ne,:);
+
+            umNC_0    = x[:, 1];
+            umPL_0    = x[:,2];
+            umYC_0    = x[:,3];
+            umD_0     = x[:,4];
+            ufNC_0    = x[:,5];
+            ufPL_0    = x[:,6];
+            ufYC_0    = x[:,7];
+            ufD_0     = x[:,8];
+
+            hmNC_0    = x[:,9:29];
+            hmYC_0    = x[:,30:50];
+            hmPL_0    = x[:,51:71];
+            hmD_0     = x[:,72:92];
+            hfNC_0    = x[:,93:113];
+            hfYC_0    = x[:,114:134];
+            hfPL_0    = x[:,135:155];
+            hfD_0     = x[:,156:176];
+
+            solveDistMatrix = Dict("umNC_0"=>umNC_0,"hmNC_0"=>hmNC_0);
+            get!(solveDistMatrix, "hmPL_0", hmPL_0);
+            get!(solveDistMatrix, "hmYC_0", hmYC_0);
+            get!(solveDistMatrix, "hmD_0", hmD_0);
+
+            get!(solveDistMatrix, "hfNC_0", hfNC_0);
+            get!(solveDistMatrix, "hfPL_0", hfPL_0);
+            get!(solveDistMatrix, "hfYC_0", hfYC_0);
+            get!(solveDistMatrix, "hfD_0", hfD_0);
+
+            get!(solveDistMatrix, "umPL_0", umPL_0);
+            get!(solveDistMatrix, "umYC_0", umYC_0);
+            get!(solveDistMatrix, "umD_0", umD_0);
+
+            get!(solveDistMatrix, "ufNC_0", ufNC_0);
+            get!(solveDistMatrix, "ufPL_0", ufPL_0);
+            get!(solveDistMatrix, "ufYC_0", ufYC_0);
+            get!(solveDistMatrix, "ufD_0", ufD_0);
+
+            return solveDistMatrix;
+        end
+
+
         for it2 = 1:maxit
             x = solveDist(x0, set, fxp, par, SmNC, SmPL, SmYC, SmD, SfNC, SfPL, SfYC, SfD, e["stages"]);
-            x[abs.(x) .< 1e-30] .= 0;
-            dev = (x-x0)./x0;
+            x[x .< 1e-30] .= 0;
+            dev = (x-x0)./x0; #percentage deviation 
             replace!(dev, Inf=>NaN);
             replace!(dev, NaN => 0)
             change2  = sum(dev.^2)
@@ -327,7 +456,7 @@ function solve(par, set, fxp, init;purpose="solve")
                 println("converged in " * string(it2) * " iterations, with change:" * string(change2));
                 break;
             end  
-            x0 = x;
+            x0 = copy(x);
         end
         #If this fixed point in distributions is different from the initial
         #distribution, then repeat the who process again
@@ -335,7 +464,8 @@ function solve(par, set, fxp, init;purpose="solve")
         replace!(dev, Inf=>NaN);
         replace!(dev, NaN => 0)
         change_dist[itout]  = sum(dev.^2);
-    
+
+        
         #Print Progress
         println("=================="*"Outer Iteration " *string(itout)*" with change "*string(change_dist[itout])*"==================");
         #Update Solution for distributions
@@ -344,7 +474,7 @@ function solve(par, set, fxp, init;purpose="solve")
         x = deleteat!(x, length(x)-set.Ny*set.Na+1:length(x));
         x = reshape(x,set.Nx*set.Ne,:);
     
-        umNC_0    = x[:, 1];
+        umNC_0    = x[:,1];
         umPL_0    = x[:,2];
         umYC_0    = x[:,3];
         umD_0     = x[:,4];
@@ -362,51 +492,70 @@ function solve(par, set, fxp, init;purpose="solve")
         hfD_0     = x[:,156:176];
     
         #output distribution 
-        get!(e, "hmNC", hmNC_0);
-        get!(e, "hmPL", hmPL_0);
-        get!(e, "hmYC", hmYC_0);
-        get!(e, "hmD", hmD_0);
-        get!(e, "hfNC", hfNC_0);
-        get!(e, "hfPL", hfPL_0);
-        get!(e, "hfYC", hfYC_0);
-        get!(e, "hfD", hfD_0);
+        e["hmNC"]=hmNC_0;
+        e["hmPL"]=hmPL_0;
+        e["hmYC"]=hmYC_0;
+        e["hmD"]=hmD_0;
+
+        e["hfNC"]=hfNC_0;
+        e["hfPL"]=hfPL_0;
+        e["hfYC"]=hfYC_0;
+        e["hfD"]=hfD_0;
+
+        e["umNC"]=umNC_0;
+        e["umPL"]=umPL_0;
+        e["umYC"]=umYC_0;
+        e["umD"]=umD_0;
+
+        e["ufNC"]=ufNC_0;
+        e["ufPL"]=ufPL_0;
+        e["ufYC"]=ufYC_0;
+        e["ufD"]=ufD_0;
+
+        e["v"]=v0;
     
-        get!(e, "umNC", umNC_0);
-        get!(e, "umPL", umPL_0);
-        get!(e, "umYC", umYC_0);
-        get!(e, "umD", umD_0);
-        get!(e, "ufNC", ufNC_0);
-        get!(e, "ufPL", ufPL_0);
-        get!(e, "ufYC", ufYC_0);
-        get!(e, "ufD", ufD_0);
-    
-        get!(e, "v", v0);
+
     
         #output surpluses
-        get!(e, "SmNC", SmNC);
-        get!(e, "SmPL", SmPL);
-        get!(e, "SmYC", SmYC);
-        get!(e, "SmD", SmD);
-        get!(e, "SfNC", SfNC);
-        get!(e, "SfPL", SfPL);
-        get!(e, "SfYC", SfYC);
-        get!(e, "SfD", SfD);
-    
-        get!(e, "UmNC", UmNC);
-        get!(e, "UmPL", UmPL);
-        get!(e, "UmYC", UmYC);
-        get!(e, "UmD", UmD);
-        get!(e, "UfNC", UfNC);
-        get!(e, "UfPL", UfPL);
-        get!(e, "UfYC", UfYC);
-        get!(e, "UfD", UfD);
-    
-        get!(e, "Pi", Pi);
+        e["SmNC"]=SmNC;
+        e["SmPL"]=SmPL;
+        e["SmYC"]=SmYC;
+        e["SmD"]=SmD;
+
+        e["SfNC"]=SfNC;
+        e["SfPL"]=SfPL;
+        e["SfYC"]=SfYC;
+        e["SfD"]=SfD;
+
+        e["UmNC"]=UmNC;
+        e["UmPL"]=UmPL;
+        e["UmYC"]=UmYC;
+        e["UmD"]=UmD;
+
+        e["UfNC"]=UfNC;
+        e["UfPL"]=UfPL;
+        e["UfYC"]=UfYC;
+        e["UfD"]=UfD;
+
+        e["Pi"]=Pi;
     
         #Update Tax Rate
-        tau = fxp.Transfer * sum(sum(hmPL_0 + hfPL_0, dims = 1) .* output, dims = 1) / (sum(sum(hmNC_0 + hfNC_0 + hmYC_0 + hfYC_0 + hmD_0 + hfD_0, dims = 1) .* output, dims = 1));
-        get!(e, "tau", tau);
-    
+        tau_temp = fxp.Transfer * sum(sum(hmPL_0 + hfPL_0, dims = 1) .* output, dims = 1) / (sum(sum(hmNC_0 + hfNC_0 + hmYC_0 + hfYC_0 + hmD_0 + hfD_0, dims = 1) .* output, dims = 1));
+        e["tau"] = tau_temp;
+
+        #for development purpose, will delete later
+        if(cmp(purpose,"one_outer_loop")==0)
+            if(itout == 1)
+                return fxp,e;
+            end
+        end
+
+        if(cmp(purpose,"two_outer_loop")==0)
+            if(itout == 2)
+                return fxp,e;
+            end
+        end
+        
         #Convergence Check: bouncing between 2 iterations
         if (((itout>3) && (abs(change_dist[itout-1]-change_dist[itout-3])<tol/100)) || itout > 30)
             get!(e, "Pineg", 0);
@@ -428,6 +577,14 @@ function solve(par, set, fxp, init;purpose="solve")
             break;
         end
     end
+
+    if(cmp(purpose,"solve_eqm_wo_wage")==0)
+        return e;
+    end
+
+
+    #Wage solution 
+
     return e;
 end
 export solve

@@ -1,6 +1,5 @@
 using Xiao2021
 using Test
-using
 
 
 @testset "solve_eqm" begin
@@ -10,5 +9,5 @@ using
     fxp = getFixParameters();
     init = getInit();
     e = solve_eqm.solve(par,set,fxp,init);
-    @test e
+    e_matlab = solve_eqm_test.getDictMatlabWoWage();
 end
