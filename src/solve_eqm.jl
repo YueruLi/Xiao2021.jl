@@ -540,8 +540,8 @@ function solve(par, set, fxp, init; purpose="solve")
         e["Pi"] = Pi
 
         #Update Tax Rate
-        tau_temp = fxp.Transfer * sum(sum(hmPL_0 + hfPL_0, dims=1) .* output, dims=1) / (sum(sum(hmNC_0 + hfNC_0 + hmYC_0 + hfYC_0 + hmD_0 + hfD_0, dims=1) .* output, dims=1))
-        e["tau"] = tau_temp
+        tau = fxp.Transfer * sum(sum(hmPL_0 + hfPL_0, dims=1) .* output, dims=1) / (sum(sum(hmNC_0 + hfNC_0 + hmYC_0 + hfYC_0 + hmD_0 + hfD_0, dims=1) .* output, dims=1))
+        e["tau"] = tau
 
         #for development purpose, will delete later
         if (cmp(purpose, "one_outer_loop") == 0)
